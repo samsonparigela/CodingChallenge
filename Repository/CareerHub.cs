@@ -1,11 +1,10 @@
-﻿
-using CodingChallenge.Entity;
+﻿using CodingChallenge.Entity;
 using CodingChallenge.Exceptions;
 using Microsoft.Data.SqlClient;
 
 namespace CodingChallenge.Repository
 {
-	public class CareerHub
+	public class CareerHub:ICareerHub
 	{
 
         #region RegisterApplicant
@@ -18,7 +17,7 @@ namespace CodingChallenge.Repository
             string query = $"SELECT * FROM APPLICANT WHERE APPLICANTID={applicantID}";
             SqlCommand cmd = new SqlCommand(query, conn);
             int n = cmd.ExecuteNonQuery();
-            if(n<=0)
+            if(n>0)
             {
                 Console.WriteLine("Applicant already found");
                 return false;
@@ -81,7 +80,7 @@ namespace CodingChallenge.Repository
             string query = $"SELECT * FROM Company WHERE CompanyID={companyID}";
             SqlCommand cmd = new SqlCommand(query, conn);
             int n = cmd.ExecuteNonQuery();
-            if (n <= 0)
+            if (n >0)
             {
                 Console.WriteLine("Company already found");
                 return false;
@@ -162,7 +161,7 @@ namespace CodingChallenge.Repository
             jl.JobType = jobType;
             jl.PostedDate = postedDate;
 
-            query = "INSERT INTO APPLICANT VALUES(@JobID,@CompanyID,@JobTitle,@JobDescription,@JobLocation,@Salary,@JobType,@PostedDate)";
+            query = "INSERT INTO JobListing VALUES(@JobID,@CompanyID,@JobTitle,@JobDescription,@JobLocation,@Salary,@JobType,@PostedDate)";
             cmd = new SqlCommand(query, conn);
             cmd.Parameters.AddWithValue("@JobID", jl.JobID);
             cmd.Parameters.AddWithValue("@CompanyID", jl.CompanyID);
@@ -259,7 +258,39 @@ namespace CodingChallenge.Repository
 
             }
             rd.Close();
-            Console.WriteLine("Added");
+            return jbList;
+
+
+        }
+        #endregion
+
+        #region GetAlltheJobsByRange
+        public List<JobListing> GetAlltheJobsInRange(SqlConnection conn)
+        {
+            List<JobListing> jbList = new List<JobListing>();
+            Console.WriteLine("Enter Min and Max Salary to search");
+            int min = int.Parse(Console.ReadLine());
+            int max = int.Parse(Console.ReadLine());
+            string query = $"SELECT * FROM JobListing WHERE SALARY BETWEEN {min} AND {max}";
+            SqlCommand cmd = new SqlCommand(query, conn);
+            SqlDataReader rd = cmd.ExecuteReader();
+            while (rd.Read())
+            {
+                JobListing jb = new JobListing();
+
+                jb.JobID = (int)rd["JobID"];
+                jb.CompanyID = (int)rd["CompanyID"];
+                jb.JobTitle = (string)rd["JobTitle"];
+                jb.Description = (string)rd["JobDescription"];
+                jb.JobLocation = (string)rd["JobLocation"];
+                jb.Salary = (double)rd["Salary"];
+                jb.JobType = (string)rd["JobType"];
+                jb.PostedDate = (DateTime)rd["PostedDate"];
+
+                jbList.Add(jb);
+
+            }
+            rd.Close();
             return jbList;
 
 
@@ -472,7 +503,7 @@ namespace CodingChallenge.Repository
             do
             {
                 Console.WriteLine("\n1. Apply for Job\n2. Get the jobs you Applied for\n3. Get all the Jobs" +
-                "\n4. Get Companies\n5. User Profile\n6. Logout\n");
+                "\n4. Get Companies\n5. User Profile\n6. Get The Job in salary range\n7. Logout\n");
                 Console.WriteLine("Choose from 1-6");
                 int ch = int.Parse(Console.ReadLine());
                 switch (ch)
@@ -482,24 +513,33 @@ namespace CodingChallenge.Repository
                         break;
                     case 2:
                         jobListings = GetJobsApplied(applicant,conn);
-                        foreach(JobListing jb in jobListings)
+                        Console.WriteLine("Job ID\t Company ID\t Title\t Description\t Location\t Salary\t Type\t Date\n");
+                        foreach (JobListing jb in jobListings)
                             Console.WriteLine(jb);
                         break;
                     case 3:
                         jobListings = GetAlltheJobs(conn);
+                        Console.WriteLine("Job ID\t Company ID\t Title\t Description\t Location\t Salary\t Type\t Date\n");
                         foreach (JobListing jb in jobListings)
                             Console.WriteLine(jb);
                         break;
                     case 4:
+                        Console.WriteLine("Company Id \tCompany Name \tLocation\n");
                         companyList = GetCompanies(conn);
                         foreach (Company cp in companyList)
                             Console.WriteLine(cp);
                         break;
                     case 5:
+                        Console.WriteLine("Applicant ID \tFirst Name \tLast Name \tEmail \tPhone \tResume\n");
                         Console.WriteLine(applicant);
                         break;
-
                     case 6:
+                        jobListings = GetAlltheJobsInRange(conn);
+                        Console.WriteLine("Job ID\t Company ID\t Title\t Description\t Location\t Salary\t Type\t Date\n");
+                        foreach (JobListing jb in jobListings)
+                            Console.WriteLine(jb);
+                        break;
+                    case 7:
                         Console.WriteLine("Logging out");
                         n = 0;
                         break;
@@ -567,18 +607,22 @@ namespace CodingChallenge.Repository
                     case 1:
                         JAList=GetApplicationsForJob(company,conn);
                         Console.WriteLine(" ");
+                        Console.WriteLine("Application ID\t Job ID\t Applicant ID\t Application Date\t Cover Letter\n");
+                        Console.WriteLine(" ");
                         foreach (JobApplication jb in JAList)
                             Console.WriteLine(jb);
                         break;
                     case 2:
                         jblist= GetJobsPosted(company,conn);
                         Console.WriteLine(" ");
+                        Console.WriteLine("Job ID\t Company ID\t Title\t Description\t Location\t Salary\t Type\t Date\n");
                         foreach(JobListing jb in jblist)
                             Console.WriteLine(jb);
                         break;
                     case 3:
                         AppList=GetAllApplicants(conn);
-                        foreach(Applicant ap in AppList)
+                        Console.WriteLine("Applicant ID \tFirst Name \tLast Name \tEmail \tPhone \tResume\n");
+                        foreach (Applicant ap in AppList)
                             Console.WriteLine(ap);
                         break;
                     case 4:
